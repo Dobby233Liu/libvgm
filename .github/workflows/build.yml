@@ -16,7 +16,7 @@ jobs:
           #- { os: windows-latest, shell: bash, compiler: msvc, build_type: Release, extra_settings: "-A x64" }
           #- { os: windows-latest, shell: bash, compiler: msvc, build_type: Debug, extra_settings: "-A x64" }
           - { os: windows-latest, shell: "msys2 {0}", compiler: mingw, build_type: Release, extra_settings: '-G "MSYS Makefiles"' }
-          - { os: windows-latest, shell: "msys2 {0}", compiler: mingw, build_type: Debug, extra_settings: '-G "MSYS Makefiles"' }
+          - { os: windows-latest, shell: "msys2 {0}", compiler: mingw, build_type: Debug, extra_settings: '-G \\"MSYS Makefiles\\"' }
           - { os: macos-latest, shell: bash, build_type: Release }
           - { os: macos-latest, shell: bash, build_type: Debug }
           - { os: ubuntu-latest, shell: bash, build_type: Release }
