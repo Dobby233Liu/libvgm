@@ -27,41 +27,44 @@ jobs:
     defaults:
       run:
         shell: ${{ matrix.config.shell }}
+    env:
+      CI_BUILD_TYPE: ${{ matrix.config.build_type }}
+      CI_EXTRA_SETTINGS: ${{ matrix.config.extra_settings }}
 
     steps:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Dependencies [Windows MinGW]
+    - name: Prepare enviornment [Windows MinGW]
       if: runner.os == 'Windows' && matrix.config.compiler == 'mingw'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
-        update: true
+        # update: true
         install: |
           make mingw-w64-x86_64-cmake
           mingw-w64-x86_64-toolchain
           mingw-w64-x86_64-zlib mingw-w64-x86_64-libiconv
 
+    # avoid linker errors by enforcing WinAPI (instead of libiconv)
+    # and zdll.lib (DLL instead of static)
+    # The libraries that are shipped with libvgm were built with VC6 and VC2010
+    # and don't work with VS2015 and higher.
     - name: Fix dependencies [MSVC]
       if: matrix.config.compiler == 'msvc'
       run: |
-        # avoid linker errors by enforcing WinAPI (instead of libiconv)
-        # and zdll.lib (DLL instead of static)
-        # The libraries that are shipped with libvgm were built with VC6 and VC2010
-        # and don't work with VS2015 and higher.
         echo "CMAKE_OPTS=-DUTIL_CHARCNV_ICONV=OFF -DUTIL_CHARCNV_WINAPI=ON " \
         "-DZLIB_LIBRARY_DEBUG=${GITHUB_WORKSPACE}/libs/lib/zdll.lib " \
         "-DZLIB_LIBRARY_RELEASE=${GITHUB_WORKSPACE}/libs/lib/zdll.lib" >> $GITHUB_ENV
 
-    - name: Dependencies [macOS]
+    - name: Install dependencies [macOS]
       if: runner.os == 'macOS'
       run: |
         export HOMEBREW_NO_INSTALL_CLEANUP=1
         brew update
         brew install libao
 
-    - name: Dependencies [Linux]
+    - name: Install dependencies [Linux]
       if: runner.os == 'Linux'
       run: |
         sudo apt update
@@ -73,10 +76,10 @@ jobs:
 
     - name: Configuring
       run: |
-        cmake ${{ matrix.config.extra_settings }} \
-          -B ${GITHUB_WORKSPACE}/build \
-          -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install \
-          -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+        cmake ${CI_EXTRA_SETTINGS} \
+          -B build \
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DCMAKE_BUILD_TYPE=${CI_BUILD_TYPE} \
           ${CMAKE_OPTS} \
           -DBUILD_TESTS=ON \
 
@@ -84,20 +87,20 @@ jobs:
       run: |
         cmake \
           --build ${GITHUB_WORKSPACE}/build \
-          --config ${{ matrix.config.build_type }} \
+          --config ${CI_BUILD_TYPE} \
           --parallel 2 \
 
     - name: Install
       run: |
         cmake \
           --install ${GITHUB_WORKSPACE}/build \
-          --config ${{ matrix.config.build_type }}
+          --config ${CI_BUILD_TYPE}
 
     - name: Check
       run: |
         echo "Installed files"
         echo "========================="
-        find ${GITHUB_WORKSPACE}/install
+        find install
         echo ""
         
         function file_lib() {
@@ -109,7 +112,7 @@ jobs:
         
         echo "Compiled libraries"
         echo "==========================="
-        find ${GITHUB_WORKSPACE}/install \
+        find install \
           -name 'libvgm-*' \
           -exec bash -c "file_lib \"{}\"" \;
         
@@ -122,6 +125,6 @@ jobs:
         
         echo "pkg-config package files"
         echo "================================"
-        find ${GITHUB_WORKSPACE}/install/lib/pkgconfig \
+        find install/lib/pkgconfig \
           -name '*.pc' \
           -exec bash -c "print_pc \"{}\"" \;
