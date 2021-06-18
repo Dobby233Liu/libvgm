@@ -86,14 +86,14 @@ jobs:
     - name: Build
       run: |
         cmake \
-          --build ${GITHUB_WORKSPACE}/build \
+          --build build \
           --config ${CI_BUILD_TYPE} \
           --parallel 2 \
 
     - name: Install
       run: |
         cmake \
-          --install ${GITHUB_WORKSPACE}/build \
+          --install build \
           --config ${CI_BUILD_TYPE}
 
     - name: Check
